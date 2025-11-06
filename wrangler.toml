@@ -1,0 +1,35 @@
+name = "vinet-ops"
+main = "src/index.js"
+compatibility_date = "2025-11-01"
+workers_dev = true
+
+
+[vars]
+SPYLNX_URL = "https://splynx.vinet.co.za"
+CORS_ORIGIN = "*"
+# AUTH_HEADER is your Basic auth header for Splynx. Set via `wrangler secret put AUTH_HEADER`.
+
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vinet-ops"
+database_id = "<D1_ID>"
+
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "vinet-ops-media"
+
+
+[[kv_namespaces]]
+binding = "SESSION_KV"
+id = "<SESSION_KV_ID>"
+
+
+[[kv_namespaces]]
+binding = "CONFIG_KV"
+id = "<CONFIG_KV_ID>"
+
+
+[site]
+bucket = "public"
