@@ -1,78 +1,77 @@
--- users & mapping to Splynx admin
-job_id TEXT,
-customer_id INTEGER,
-photo_url TEXT
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT,
+  role TEXT NOT NULL DEFAULT 'agent', -- admin, agent
+  wa_number TEXT,
+  splynx_admin_id INTEGER,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER,
+  updated_at INTEGER
 );
 
-
-CREATE TABLE IF NOT EXISTS assignments(
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-assignee_user INTEGER,
-product_id INTEGER,
-qty REAL,
-serial_id INTEGER,
-status TEXT,
-created_at INTEGER,
-updated_at INTEGER,
-job_id TEXT,
-customer_id INTEGER
+CREATE TABLE IF NOT EXISTS tariffs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT UNIQUE NOT NULL,
+  name TEXT,
+  price REAL,
+  updated_at INTEGER
 );
 
-
--- tasks & time
-CREATE TABLE IF NOT EXISTS tasks(
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-title TEXT,
-description TEXT,
-source TEXT,
-source_id TEXT,
-customer_id INTEGER,
-priority TEXT,
-status TEXT,
-assigned_to INTEGER,
-created_by INTEGER,
-planned_start INTEGER,
-planned_end INTEGER,
-created_at INTEGER,
-updated_at INTEGER
+CREATE TABLE IF NOT EXISTS signup_leads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  first_name TEXT,
+  last_name TEXT,
+  company TEXT,
+  phone TEXT,
+  email TEXT,
+  street TEXT,
+  city TEXT,
+  zip TEXT,
+  comment TEXT,
+  tariffs TEXT,
+  splynx_lead_id INTEGER,
+  created_at INTEGER
 );
 
-
-CREATE TABLE IF NOT EXISTS time_entries(
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-task_id INTEGER,
-user_id INTEGER,
-started_at INTEGER,
-stopped_at INTEGER,
-duration_sec INTEGER,
-note TEXT,
-geo_lat REAL,
-geo_lng REAL,
-photo_url TEXT,
-synced INTEGER DEFAULT 0
+CREATE TABLE IF NOT EXISTS stock_moves (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  agent_id INTEGER,
+  barcode TEXT,
+  photo_url TEXT,
+  note TEXT,
+  created_at INTEGER
 );
 
-
--- cached customers (optional)
-CREATE TABLE IF NOT EXISTS customers(
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-splynx_customer_id INTEGER UNIQUE,
-name TEXT,
-phone TEXT,
-email TEXT,
-city TEXT,
-street TEXT,
-zip TEXT,
-updated_at INTEGER
+CREATE TABLE IF NOT EXISTS time_pings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  lat REAL,
+  lng REAL,
+  status TEXT,
+  task TEXT,
+  created_at INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  event TEXT,
+  meta TEXT,
+  created_at INTEGER
+);
 
-CREATE TABLE IF NOT EXISTS audit_logs(
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-user_id INTEGER,
-action TEXT,
-entity TEXT,
-entity_id TEXT,
-payload TEXT,
-at_ts INTEGER
+CREATE TABLE IF NOT EXISTS tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT DEFAULT 'open',          -- open|in_progress|done|cancelled
+  priority TEXT DEFAULT 'normal',      -- low|normal|high
+  assigned_user_id INTEGER,
+  created_by_user_id INTEGER,
+  splynx_task_id INTEGER,
+  customer_id INTEGER,
+  due_at INTEGER,
+  created_at INTEGER,
+  updated_at INTEGER
 );
