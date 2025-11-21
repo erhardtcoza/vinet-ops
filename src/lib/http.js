@@ -1,5 +1,27 @@
+export function text(body, status = 200, headers = {}) {
+  return new Response(body, {
+    status,
+    headers: { "content-type": "text/plain; charset=utf-8", ...headers },
+  });
+}
 
-export const text = (s, c=200, h={}) => new Response(s, { status:c, headers: { "content-type":"text/plain; charset=utf-8", ...h }});
-export const json = (o, c=200, h={}) => new Response(JSON.stringify(o), { status:c, headers: { "content-type":"application/json; charset=utf-8", ...h }});
-export const html = (s, c=200, h={}) => new Response(s, { status:c, headers: { "content-type":"text/html; charset=utf-8", ...h }});
-export function bad(msg="Bad request", c=400){ return json({ ok:false, error: msg }, c); }
+export function json(obj, status = 200, headers = {}) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8", ...headers },
+  });
+}
+
+export function html(body, status = 200, headers = {}) {
+  return new Response(body, {
+    status,
+    headers: { "content-type": "text/html; charset=utf-8", ...headers },
+  });
+}
+
+export function redirect(location, status = 302) {
+  return new Response(null, {
+    status,
+    headers: { Location: location },
+  });
+}
