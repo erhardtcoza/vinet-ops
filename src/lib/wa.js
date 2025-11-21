@@ -1,5 +1,3 @@
-// src/lib/wa.js
-
 export async function sendWhatsAppText(env, to, body) {
   if (!to || !env.WHATSAPP_TOKEN || !env.PHONE_NUMBER_ID) {
     return { ok: false, status: 0, json: { error: "wa misconfigured" } };
@@ -25,7 +23,7 @@ export async function sendWhatsAppText(env, to, body) {
   let j = null;
   try {
     j = await res.json();
-  } catch (_) {}
+  } catch {}
 
   return { ok: res.ok, status: res.status, json: j };
 }
