@@ -37,7 +37,7 @@ crons = ["0 2 * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "vinet-ops"
-database_id = "REPLACE_D1_ID"
+database_id = "ae895972-63bb-4955-8289-49e045d35cee"
 
 [[r2_buckets]]
 binding = "OPS_MEDIA"
