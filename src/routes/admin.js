@@ -1,6 +1,7 @@
 // /src/routes/admin.js
 import { html, json } from "../lib/http.js";
 import { splynxTariffsImport, splynxCreateSchedule } from "../lib/ext.js";
+import { sendWhatsAppText } from "../lib/wa.js";
 
 function adminHTML() {
   return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Vinet · Admin</title>
@@ -150,12 +151,11 @@ function adminHTML() {
       document.getElementById('ulist').innerHTML =
         rows.map(u => u.email+' · '+u.role).join('<br>') || 'No users yet.';
 
-      // populate task user selects
       const sel = document.getElementById('taskUser');
       const filt = document.getElementById('taskFilterUser');
       if (sel && filt){
-        sel.innerHTML = '<option value=\"\">Unassigned</option>';
-        filt.innerHTML = '<option value=\"\">All users</option>';
+        sel.innerHTML = '<option value="">Unassigned</option>';
+        filt.innerHTML = '<option value="">All users</option>';
         rows.forEach(u=>{
           const opt = document.createElement('option');
           opt.value = u.id;
@@ -196,7 +196,7 @@ function adminHTML() {
       if (!rows.length){ root.innerHTML = 'No tasks.'; return; }
       const pill = (st)=>{
         const cls = st==='open'?'pill-open':(st==='in_progress'?'pill-in_progress':(st==='done'?'pill-done':'pill-cancelled'));
-        return '<span class=\"pill '+cls+'\">'+st.replace('_',' ')+'</span>';
+        return '<span class="pill '+cls+'">'+st.replace('_',' ')+'</span>';
       };
       root.innerHTML = '<table><thead><tr><th>ID</th><th>Title</th><th>Assigned</th><th>Status</th><th>Due</th><th>Pri</th></tr></thead><tbody>'+
         rows.map(t =>
@@ -284,7 +284,6 @@ function adminHTML() {
 export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
   const url = new URL(req.url);
 
-  // basic auth guard (index.js already checks JWT, but double-check)
   if (!me) {
     return new Response("Unauthorized", { status: 401 });
   }
@@ -447,6 +446,17 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
 
     const now = Math.floor(Date.now() / 1000);
 
+    // fetch assigned user for WA + Splynx mapping
+    let assignedUser = null;
+    if (assigned_user_id != null) {
+      const rows = await dbAll(
+        `SELECT id,name,email,wa_number,splynx_admin_id
+         FROM users WHERE id=?`,
+        assigned_user_id,
+      );
+      assignedUser = rows[0] || null;
+    }
+
     if (!id) {
       // insert
       await dbRun(
@@ -469,23 +479,15 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
       );
       const newId = row[0]?.id || null;
 
-      // optional: try to push to Splynx scheduling
+      // push to Splynx scheduling if possible
       try {
-        const assignedUser =
-          assigned_user_id != null
-            ? await dbAll(
-                `SELECT splynx_admin_id FROM users WHERE id=?`,
-                assigned_user_id,
-              )
-            : [];
-        const splynx_admin_id = assignedUser[0]?.splynx_admin_id || null;
         const t = {
           id: newId,
           title,
           description,
           customer_id,
           due_at,
-          assigned_splynx_admin_id: splynx_admin_id,
+          assigned_splynx_admin_id: assignedUser?.splynx_admin_id || null,
         };
         const res = await splynxCreateSchedule(env, t);
         if (res.ok && res.json?.id) {
@@ -497,7 +499,6 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
           );
         }
       } catch (e) {
-        // ignore, log to audit
         await dbRun(
           `INSERT INTO audit_logs (user_id,event,meta,created_at)
            VALUES (?,?,?,?)`,
@@ -506,6 +507,16 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
           JSON.stringify({ error: String(e) }),
           now,
         );
+      }
+
+      // WhatsApp notify on new assignment
+      if (assignedUser?.wa_number) {
+        const msg =
+          `New task assigned:\n` +
+          `#${newId} · ${title}\n` +
+          (due_at ? `Due: ${new Date(due_at*1000).toLocaleString()}\n` : "") +
+          (description ? `Notes: ${description}` : "");
+        await sendWhatsAppText(env, assignedUser.wa_number, msg);
       }
 
       await dbRun(
@@ -533,6 +544,18 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
         now,
         id,
       );
+
+      // WhatsApp notify on status / reassignment
+      if (assignedUser?.wa_number) {
+        const msg =
+          `Task update:\n` +
+          `#${id} · ${title}\n` +
+          `Status: ${status}\n` +
+          (due_at ? `Due: ${new Date(due_at*1000).toLocaleString()}\n` : "") +
+          (description ? `Notes: ${description}` : "");
+        await sendWhatsAppText(env, assignedUser.wa_number, msg);
+      }
+
       await dbRun(
         `INSERT INTO audit_logs (user_id,event,meta,created_at)
          VALUES (?,?,?,?)`,
