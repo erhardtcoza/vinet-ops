@@ -26,18 +26,19 @@ TURNSTILE_SITE_KEY = "REPLACE_TURNSTILE_SITE_KEY"
 TURNSTILE_SECRET_KEY = "REPLACE_TURNSTILE_SECRET_KEY"
 
 # SSO / cookies
-SSO_SECRET = "|@8?`<lt6j3)klfs}Gb%:;z=*Oe!^72pfb)t9toBS'"HLxs@Hf,q)J?h,5_/9$W"   # at least 32+ chars
+SSO_SECRET = "|@8?`<lt6j3)klfs}Gb%:;z=*Oe!^72pfb)t9toBS'HLxs@Hf,q)J?h,5_/9$W"   # at least 32+ chars
 COOKIE_DOMAIN = ".vinet.co.za"
 
 # R2 – public base path for images
 R2_PUBLIC_BASE = "https://w-image.vinetdns.co.za"
 
 # WhatsApp Cloud API (OTP + notifications)
-WHATSAPP_TOKEN = "REPLACE_WHATSAPP_TOKEN"
+WHATSAPP_TOKEN = "EAALpZCXUFpXsBP4SCZAtADZCbyZCT6oVr0yxURa0lZBpX2FFkUZBDYxwGbYOpyWggvxX2l8T1zTqanUtLTl58mC0mJw8vJyRrvKvoI9ZCkxmFPmlvBaaJBR2mI1IQynm9xgkx1GWaPhinLCS9Dkc1EymcXd6A9PLwSRuAGPmpaK4lEFPIrN1asZBbo7P4ZCHxxViILAZDZD"
 PHONE_NUMBER_ID = "104043025887306"
+BUSINESS_ID = "416413345495591"
 WA_TEMPLATE_OTP = "vinet_otp"
 WA_TEMPLATE_NOTIFY = "vinet_notify"
-WA_ADMIN_MSISDN = "27XXXXXXXXX"  # your admin WA MSISDN
+WA_ADMIN_MSISDN = "27718878933"  # your admin WA MSISDN
 
 # Splynx inventory defaults for quick-assign
 INVENTORY_STORE_ID = "1"
