@@ -1,5 +1,4 @@
 
-async function sha256(txt){ const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt)); return btoa(String.fromCharCode(...new Uint8Array(buf))); }
 function base64url(b){ return btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function enc(o){ return btoa(unescape(encodeURIComponent(JSON.stringify(o)))); }
 export async function signJWT(payload, secret){

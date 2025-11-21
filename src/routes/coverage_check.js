@@ -1,29 +1,25 @@
 
 import { json } from "../lib/http.js";
 import { pointInPoly } from "../lib/geo.js";
+import { waSendText } from "../lib/wa.js";
 
 function parseCoords(block){
   return block.trim().split(/\s+/).map(p=>{
     const [lon,lat] = p.split(',').map(Number); return [lon,lat];
   }).filter(a=>Number.isFinite(a[0]) && Number.isFinite(a[1]));
 }
-
 async function loadKML(env, key){
   const txt = await env.COVERAGE.get(key); if(!txt) return [];
   const out=[];
   const polyRe=/<Polygon[\s\S]*?<outerBoundaryIs>[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>[\s\S]*?<\/outerBoundaryIs>[\s\S]*?<\/Polygon>/gi;
-  let m; while ((m = polyRe.exec(txt))){
-    out.push(parseCoords(m[1]));
-  }
+  let m; while ((m = polyRe.exec(txt))){ out.push(parseCoords(m[1])); }
   return out;
 }
-
 const LAYERS=[
   { key:"ftth_vinet.kml", code:"fibre_vinet" },
   { key:"ftth_frogfoot.kml", code:"fibre_frogfoot" },
   { key:"wireless.kml", code:"wireless" }
 ];
-
 export async function handleCoverageCheck(req, env, { dbAll }){
   const url = new URL(req.url);
   if (url.pathname !== "/api/coverage/check") return new Response("Not found", { status:404 });
@@ -44,5 +40,6 @@ export async function handleCoverageCheck(req, env, { dbAll }){
   const recommendation = matches.includes("fibre_vinet") ? pick("fibre_vinet")
                         : matches.includes("fibre_frogfoot") ? pick("fibre_frogfoot")
                         : matches.includes("wireless") ? pick("wireless") : null;
+  try{ if (env.WA_ADMIN_MSISDN && matches.length) await waSendText(env, env.WA_ADMIN_MSISDN, `Coverage hit: ${lat},${lng} -> ${matches.join("/")}`);}catch(e){}
   return json({ ok:true, matches, recommendation });
 }

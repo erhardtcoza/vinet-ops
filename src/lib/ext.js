@@ -32,3 +32,13 @@ export async function splynxLeadSync(env, lead){
     return { action:"create", ok: crt.ok, status: crt.status, id };
   }
 }
+export async function splynxCreateStockMove(env, { barcode, note, photo_url }){
+  const body = {
+    store_id: Number(env.INVENTORY_STORE_ID||1),
+    move_type_id: Number(env.INVENTORY_MOVE_TYPE_ID||1),
+    comment: note || "quick-assign via vinet-ops",
+    attachments: photo_url ? [ { url: photo_url } ] : [],
+    barcode: barcode
+  };
+  return await splynxFetch(env, `/api/2.0/admin/inventory/stock-moves`, { method:"POST", body: JSON.stringify(body) });
+}

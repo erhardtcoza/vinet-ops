@@ -1,5 +1,5 @@
 
-import { html, json, bad } from "../lib/http.js";
+import { html, json } from "../lib/http.js";
 import { splynxTariffsImport } from "../lib/ext.js";
 
 function adminHTML(){
@@ -25,11 +25,19 @@ function adminHTML(){
       <div id="covRes" class="muted" style="margin-top:8px">—</div>
     </div>
     <div class="card">
+      <h3 style="margin-top:0">Live View</h3>
+      <p class="muted">Last pings & per-user timeline</p>
+      <div id="map" style="height:420px;border-radius:12px;margin-bottom:8px"></div>
+      <div id="timeline" class="muted">—</div>
+    </div>
+    <div class="card">
       <h3 style="margin-top:0">Audit</h3>
       <div class="row"><a href="/api/admin/audit.csv" class="btn" target="_blank">Download CSV</a></div>
       <div id="alist" class="muted" style="margin-top:8px">—</div>
     </div>
   </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script>
     async function loadTariffs(){ const r = await fetch('/api/admin/tariffs').then(r=>r.json()); document.getElementById('tlist').innerHTML=(r.rows||[]).map(t=>t.code+' — R'+t.price).join('<br>'); }
     document.getElementById('import').onclick = async ()=>{ document.getElementById('tstat').textContent='...'; const r = await fetch('/api/admin/tariffs/import',{method:'POST'}).then(r=>r.json()); document.getElementById('tstat').textContent='Imported '+(r.imported||0); loadTariffs(); };
@@ -38,6 +46,25 @@ function adminHTML(){
     document.getElementById('covBtn').onclick = async ()=>{ const lat = (document.getElementById('covLat').value||'').trim(); const lng = (document.getElementById('covLng').value||'').trim(); const r = await fetch('/api/coverage/check?lat='+lat+'&lng='+lng).then(r=>r.json()); document.getElementById('covRes').textContent = r.ok ? ('Matches: '+(r.matches||[]).join(', ') + (r.recommendation? (' | Recommend: '+r.recommendation.code+' @ R'+r.recommendation.price):'')) : 'Error'; };
     async function loadAudit(){ const a = await fetch('/api/admin/audit').then(r=>r.json()); document.getElementById('alist').innerHTML=(a.rows||[]).slice(0,20).map(r=>('['+new Date(r.created_at*1000).toLocaleString()+'] '+r.event)).join('<br>'); }
     loadTariffs(); loadUsers(); loadAudit();
+
+    const m = L.map('map').setView([-33.84, 18.84], 9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(m);
+    let markers = [];
+    async function loadPings(){
+      const r = await fetch('/api/admin/time').then(r=>r.json()).catch(()=>({rows:[] }));
+      markers.forEach(mm=>m.removeLayer(mm)); markers=[];
+      const byUser = {};
+      r.rows.forEach(p=>{ if (!byUser[p.user_id||0]) byUser[p.user_id||0]=[]; byUser[p.user_id||0].push(p); });
+      const parts=[];
+      for (const uid in byUser){
+        const arr = byUser[uid].sort((a,b)=>b.created_at-a.created_at);
+        const last = arr[0];
+        if (last && last.lat && last.lng){ markers.push(L.marker([last.lat,last.lng]).addTo(m).bindPopup((last.name||('User '+uid))+' · '+new Date(last.created_at*1000).toLocaleString()+' · '+(last.status||''))); }
+        parts.push('<strong>'+(last?.name||('User '+uid))+'</strong><br>'+arr.slice(0,10).map(p=>('['+new Date(p.created_at*1000).toLocaleTimeString()+'] '+(p.status||'')+(p.task?(' · '+p.task):'')+(p.lat?(' · '+p.lat.toFixed(4)+','+p.lng.toFixed(4)):'') )).join('<br>'));
+      }
+      document.getElementById('timeline').innerHTML = parts.join('<hr>');
+    }
+    loadPings(); setInterval(loadPings, 60000);
   </script></body></html>`;
 }
 
@@ -78,6 +105,17 @@ export async function handleAdmin(req, env, { dbAll, dbRun }){
     const header="id,user_id,event,meta,created_at\n";
     const csv = header + rows.map(r=>[r.id,r.user_id,r.event,r.meta,r.created_at].map(x=>`"${String(x||'').replace(/"/g,'""')}"`).join(',')).join('\n');
     return new Response(csv, { headers:{ "content-type":"text/csv; charset=utf-8" }});
+  }
+  if (url.pathname === "/api/admin/time" && req.method === "GET"){
+    const rows = await dbAll(`
+      SELECT tp.id, tp.user_id, tp.lat, tp.lng, tp.status, tp.task, tp.created_at,
+             u.name, u.email
+      FROM time_pings tp LEFT JOIN users u ON tp.user_id = u.id
+      WHERE tp.created_at >= (strftime('%s','now') - 7*24*3600)
+      ORDER BY tp.created_at DESC
+      LIMIT 2000
+    `);
+    return json({ rows });
   }
   return new Response("Not found", { status:404 });
 }

@@ -1,7 +1,6 @@
 
 import { html } from "../lib/http.js";
 import { coverageHTML } from "../ui/coverage.js";
-
 export async function handleCoverage(req, env){
   const url = new URL(req.url);
   if (url.pathname === "/coverage") return html(coverageHTML());

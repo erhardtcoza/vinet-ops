@@ -1,5 +1,5 @@
 
-import { html, json, bad } from "../lib/http.js";
+import { html } from "../lib/http.js";
 import { signJWT, verifyJWT } from "../lib/auth.js";
 import { waSendTemplate } from "../lib/wa.js";
 
@@ -19,7 +19,6 @@ function loginHTML(msg=""){
     </div>
   </div></body></html>`;
 }
-
 function verifyHTML(email, msg=""){
   return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Vinet · Verify</title>
@@ -38,8 +37,7 @@ function verifyHTML(email, msg=""){
     </div>
   </div></body></html>`;
 }
-
-export async function handleAuth(req, env, { dbAll, dbRun }){
+export async function handleAuth(req, env, { dbAll }){
   const url = new URL(req.url);
   if (url.pathname === "/auth/login" && req.method === "GET") return html(loginHTML());
   if (url.pathname === "/auth/login" && req.method === "POST"){
@@ -50,10 +48,7 @@ export async function handleAuth(req, env, { dbAll, dbRun }){
     if (!u || !u.wa_number) return html(loginHTML("User not found or missing WhatsApp number"));
     const code = (""+Math.floor(100000 + Math.random()*900000));
     await env.AUTH.put(`otp:${u.wa_number}`, JSON.stringify({ code, email }), { expirationTtl: 600 });
-    // Send WA template with code in body parameter
-    try{
-      await waSendTemplate(env, u.wa_number, env.WA_TEMPLATE_OTP || "vinet_otp", "en_US", [ { type:"body", parameters:[ { type:"text", text: code } ] } ]);
-    }catch(e){}
+    try{ await waSendTemplate(env, u.wa_number, env.WA_TEMPLATE_OTP || "vinet_otp", "en_US", [ { type:"body", parameters:[ { type:"text", text: code } ] } ]); }catch(e){}
     return html(verifyHTML(email));
   }
   if (url.pathname === "/auth/verify" && req.method === "POST"){

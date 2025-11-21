@@ -1,6 +1,6 @@
 
 const MIN = 60;
-export async function rateLimit(env, key, { limit=120, window=MIN }={}){
+export async function rateLimit(env, key, { limit=180, window=MIN }={}){
   try{
     const now = Math.floor(Date.now()/1000);
     const bucket = Math.floor(now / window);

@@ -4,6 +4,8 @@ export function base({ title, body, extraHead="" }){
   <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>${title||"Vinet Ops"}</title>
   <link rel="icon" href="/favicon.ico"/>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#E10600">
   <style>
     :root{ --bg:#f7f7f8; --card:#fff; --ink:#0b1320; --muted:#6b7280; --brand:#E10600; }
     *{ box-sizing:border-box; } body{ margin:0; font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:var(--bg); color:var(--ink); }
@@ -17,5 +19,13 @@ export function base({ title, body, extraHead="" }){
     a{ color:var(--brand); text-decoration:none; }
   </style>
   ${extraHead}
-  </head><body><div class="wrap">${body}</div></body></html>`;
+  </head><body><div class="wrap">${body}</div>
+  <script>
+  if ("serviceWorker" in navigator){
+    window.addEventListener("load", ()=>{
+      navigator.serviceWorker.register("/sw.js").catch(()=>{});
+    });
+  }
+  </script>
+  </body></html>`;
 }

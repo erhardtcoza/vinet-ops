@@ -7,15 +7,13 @@ import { handleCoverageCheck } from "./routes/coverage_check.js";
 import { handleAdmin } from "./routes/admin.js";
 import { handleAgent } from "./routes/agent.js";
 import { handleSplynx } from "./routes/splynx.js";
-import { handleAuth } from "./routes/auth.js";
-import { verifyJWT } from "./lib/auth.js";
-import { waSendText } from "./lib/wa.js";
 import { splynxTariffsImport } from "./lib/ext.js";
+import { verifyJWT } from "./lib/auth.js";
+import { handleAuth } from "./routes/auth.js";
 
 async function dbAll(env, sql, ...args){ return (await env.DB.prepare(sql).bind(...args).all()).results || []; }
 async function dbOne(env, sql, ...args){ return (await env.DB.prepare(sql).bind(...args).first()) || null; }
 async function dbRun(env, sql, ...args){ return await env.DB.prepare(sql).bind(...args).run(); }
-
 const ctx = (env)=>({ dbAll:(...a)=>dbAll(env,...a), dbOne:(...a)=>dbOne(env,...a), dbRun:(...a)=>dbRun(env,...a) });
 
 async function getUserFromCookie(req, env){
@@ -31,6 +29,25 @@ function redirectLogin(env){
   return new Response(null, { status:302, headers: h });
 }
 
+function publicRouter(req, env){
+  const url = new URL(req.url);
+  if (url.pathname === "/manifest.webmanifest"){
+    return new Response(JSON.stringify({
+      name: "Vinet Ops",
+      short_name: "VinetOps",
+      start_url: "/landing",
+      display: "standalone",
+      background_color: "#f7f7f8",
+      theme_color: "#E10600",
+      icons: [{ src: "https://static.vinet.co.za/logo.jpeg", sizes: "192x192", type: "image/jpeg" }]
+    }), { headers: { "content-type":"application/manifest+json; charset=utf-8" }});
+  }
+  if (url.pathname === "/sw.js"){
+    return new Response(`self.addEventListener("install",e=>{e.waitUntil(caches.open("vops-v1").then(c=>c.addAll(["/landing","/signup","/coverage","/manifest.webmanifest"])))});
+self.addEventListener("fetch",e=>{const u=new URL(e.request.url);if(e.request.method==="GET"&&(u.pathname.startsWith("/landing")||u.pathname.startsWith("/signup")||u.pathname.startsWith("/coverage")||u.pathname==="/manifest.webmanifest")){e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(resp=>{const copy=resp.clone();caches.open("vops-v1").then(c=>c.put(e.request,copy));return resp}).catch(()=>r)))}});`, { headers: { "content-type":"application/javascript; charset=utf-8" }});
+  }
+  return null;
+}
 
 export default {
   async fetch(req, env){
@@ -42,7 +59,8 @@ export default {
       const ok = await rateLimit(env, `${ip}:${pathname}`, { limit: 180, window: 60 });
       if (!ok) return new Response("Rate limit", { status:429 });
     }
-    if (url.pathname.startsWith('/auth/')) return handleAuth(req, env, ctx(env));
+    const pub = publicRouter(req, env); if (pub) return pub;
+    if (pathname.startsWith('/auth/')) return handleAuth(req, env, ctx(env));
     if (hostname.startsWith("new.")){
       if (pathname.startsWith("/coverage") || pathname.startsWith("/api/coverage/kml")) return handleCoverage(req, env);
       if (pathname.startsWith("/api/coverage/check")) return handleCoverageCheck(req, env, ctx(env));
@@ -51,7 +69,6 @@ export default {
     if (hostname.startsWith("dash.")) { const me = await getUserFromCookie(req, env); if (!me) return redirectLogin(env); return handleAdmin(req, env, ctx(env)); }
     if (hostname.startsWith("agent.")) { const me = await getUserFromCookie(req, env); if (!me) return redirectLogin(env); return handleAgent(req, env, ctx(env)); }
     if (pathname.startsWith("/api/admin/leads/")) return handleSplynx(req, env, ctx(env));
-    // default: show landing (for single route setups)
     return handleNew(req, env, ctx(env));
   }
 }
