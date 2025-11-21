@@ -1,4 +1,5 @@
-// src/lib/ext.js
+import { sendWhatsAppText } from "./wa.js";
+
 export async function splynxFetch(env, path, init = {}) {
   const url = `${env.SPLYNX_URL}${path}`;
   const headers = {
@@ -8,9 +9,7 @@ export async function splynxFetch(env, path, init = {}) {
   };
   const res = await fetch(url, { ...init, headers });
   let j = null;
-  try {
-    j = await res.json();
-  } catch (_) {}
+  try { j = await res.json(); } catch {}
   return { ok: res.ok, status: res.status, json: j };
 }
 
@@ -90,28 +89,25 @@ export async function splynxCreateStockMove(env, { barcode, note, photo_url }) {
   );
 }
 
-/**
- * Minimal Splynx Scheduling integration for tasks.
- * Adjust fields/endpoint to match your exact Splynx scheduling model.
- */
 export async function splynxCreateSchedule(env, task) {
   const body = {
-    // These fields may need tweaking according to your scheduling config.
-    // "title" / "name"
     title: task.title,
     description: task.description || "",
     customer_id: task.customer_id || null,
-    // Example fields – change as needed:
     start_date: task.due_at || Math.floor(Date.now() / 1000),
     end_date: task.due_at || Math.floor(Date.now() / 1000),
-    // You can map assigned_user_id to Splynx admin/technician id if you want:
     technician_id: task.assigned_splynx_admin_id || null,
     status: "open",
   };
-
   return await splynxFetch(
     env,
     `/api/2.0/admin/scheduling/tasks`,
     { method: "POST", body: JSON.stringify(body) },
   );
+}
+
+export async function sendOtpWA(env, msisdn, code) {
+  const body =
+    `Your Vinet sign-in code is ${code}. This code expires in 10 minutes.`;
+  return sendWhatsAppText(env, msisdn, body);
 }
