@@ -1,296 +1,269 @@
-// /src/routes/admin.js
 import { html, json } from "../lib/http.js";
 import { splynxTariffsImport, splynxCreateSchedule } from "../lib/ext.js";
 import { sendWhatsAppText } from "../lib/wa.js";
 
 function adminHTML() {
-  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Vinet · Admin</title>
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Vinet · Admin</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="icon" href="/favicon.ico"/>
   <style>
-    body{font:14px system-ui;background:#f7f7f8;color:#0b1320;margin:0}
-    .wrap{max-width:980px;margin:24px auto;padding:0 16px}
-    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.06);margin-bottom:12px}
-    .btn{background:#E10600;color:#fff;border:none;border-radius:10px;padding:8px 12px;cursor:pointer}
-    input,select,textarea{padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;font:inherit}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .muted{color:#6b7280}
-    textarea{width:100%;min-height:60px;resize:vertical}
-    table{border-collapse:collapse;width:100%;font-size:13px}
-    th,td{padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:left}
-    th{background:#f3f4f6;font-weight:600}
-    .pill{display:inline-block;padding:2px 6px;border-radius:999px;font-size:11px}
-    .pill-open{background:#fee2e2;color:#b91c1c}
-    .pill-in_progress{background:#fef3c7;color:#92400e}
-    .pill-done{background:#dcfce7;color:#166534}
-    .pill-cancelled{background:#e5e7eb;color:#374151}
+    body{font:14px system-ui;background:#f7f7f8;color:#0b1320;margin:0;}
+    .wrap{max-width:980px;margin:24px auto;padding:0 16px;}
+    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.06);margin-bottom:12px;}
+    .btn{background:#E10600;color:#fff;border:none;border-radius:10px;padding:8px 12px;cursor:pointer;}
+    input,select,textarea{padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;font:inherit;}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    .muted{color:#6b7280;}
+    textarea{width:100%;min-height:60px;resize:vertical;}
+    table{border-collapse:collapse;width:100%;font-size:13px;}
+    th,td{padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:left;}
+    th{background:#f3f4f6;font-weight:600;}
+    .pill{display:inline-block;padding:2px 6px;border-radius:999px;font-size:11px;}
+    .pill-open{background:#fee2e2;color:#b91c1c;}
+    .pill-in_progress{background:#fef3c7;color:#92400e;}
+    .pill-done{background:#dcfce7;color:#166534;}
+    .pill-cancelled{background:#e5e7eb;color:#374151;}
   </style>
-  </head><body><div class="wrap">
+</head>
+<body>
+<div class="wrap">
 
-    <div class="card">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <h3 style="margin-top:0">Tariffs</h3>
-        <a class="btn" href="/auth/logout">Logout</a>
-      </div>
-      <div class="row">
-        <button class="btn" id="import">Import from Splynx</button>
-        <span id="tstat" class="muted"></span>
-      </div>
-      <div id="tlist" style="margin-top:8px" class="muted">Loading…</div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;">
+      <h3 style="margin-top:0;">Tariffs</h3>
+      <a class="btn" href="/auth/logout">Logout</a>
     </div>
+    <div class="row">
+      <button class="btn" id="import">Import from Splynx</button>
+      <span id="tstat" class="muted"></span>
+    </div>
+    <div id="tlist" class="muted" style="margin-top:8px;">Loading…</div>
+  </div>
 
-    <div class="card">
-      <h3 style="margin-top:0">Users</h3>
-      <form id="usr" class="row">
-        <input name="email" placeholder="email">
-        <input name="name" placeholder="name">
-        <select name="role">
-          <option value="admin">admin</option>
-          <option value="agent">agent</option>
+  <div class="card">
+    <h3 style="margin-top:0;">Users</h3>
+    <form id="usr" class="row">
+      <input name="email" placeholder="email">
+      <input name="name" placeholder="name">
+      <select name="role">
+        <option value="admin">admin</option>
+        <option value="agent">agent</option>
+      </select>
+      <input name="wa_number" placeholder="wa number">
+      <input name="splynx_admin_id" placeholder="splynx admin id">
+      <button class="btn">Save</button>
+    </form>
+    <div id="ulist" class="muted" style="margin-top:8px;">Loading…</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;">Tasks</h3>
+    <form id="taskForm">
+      <input type="hidden" name="id">
+      <div class="row" style="margin-bottom:8px;">
+        <input name="title" placeholder="Title" style="flex:2" required>
+        <select name="priority" style="flex:1;">
+          <option value="low">Low</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">High</option>
         </select>
-        <input name="wa_number" placeholder="wa number">
-        <input name="splynx_admin_id" placeholder="splynx admin id">
-        <button class="btn">Save</button>
-      </form>
-      <div id="ulist" class="muted" style="margin-top:8px">Loading…</div>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-top:0">Tasks</h3>
-      <form id="taskForm">
-        <input type="hidden" name="id">
-        <div class="row" style="margin-bottom:8px">
-          <input name="title" placeholder="Title" style="flex:2" required>
-          <select name="priority" style="flex:1">
-            <option value="low">Low</option>
-            <option value="normal" selected>Normal</option>
-            <option value="high">High</option>
-          </select>
-          <select name="status" style="flex:1">
-            <option value="open">Open</option>
-            <option value="in_progress">In progress</option>
-            <option value="done">Done</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-        <div class="row" style="margin-bottom:8px">
-          <select name="assigned_user_id" id="taskUser" style="flex:2">
-            <option value="">Unassigned</option>
-          </select>
-          <input name="customer_id" placeholder="Customer ID (optional)" style="flex:1">
-          <input name="due_date" placeholder="Due date YYYY-MM-DD" style="flex:1">
-        </div>
-        <textarea name="description" placeholder="Description / notes"></textarea>
-        <div class="row" style="margin-top:8px">
-          <button class="btn">Save task</button>
-          <span id="taskMsg" class="muted"></span>
-        </div>
-      </form>
-
-      <div class="row" style="margin-top:12px">
-        <label class="muted">Filter:</label>
-        <select id="taskFilterStatus">
-          <option value="">All</option>
-          <option value="open" selected>Open</option>
+        <select name="status" style="flex:1;">
+          <option value="open">Open</option>
           <option value="in_progress">In progress</option>
           <option value="done">Done</option>
           <option value="cancelled">Cancelled</option>
         </select>
-        <select id="taskFilterUser">
-          <option value="">All users</option>
+      </div>
+      <div class="row" style="margin-bottom:8px;">
+        <select name="assigned_user_id" id="taskUser" style="flex:2;">
+          <option value="">Unassigned</option>
         </select>
-        <button class="btn" id="taskReload">Reload</button>
+        <input name="customer_id" placeholder="Customer ID (optional)" style="flex:1;">
+        <input name="due_date" placeholder="Due date YYYY-MM-DD" style="flex:1;">
       </div>
-
-      <div id="taskList" style="margin-top:8px;max-height:380px;overflow:auto" class="muted">Loading…</div>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-top:0">Coverage Check</h3>
-      <div class="row">
-        <input id="covLat" placeholder="lat" style="width:160px">
-        <input id="covLng" placeholder="lng" style="width:160px">
-        <button id="covBtn" class="btn">Check</button>
+      <textarea name="description" placeholder="Description / notes"></textarea>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn">Save task</button>
+        <span id="taskMsg" class="muted"></span>
       </div>
-      <div id="covRes" class="muted" style="margin-top:8px">—</div>
+    </form>
+
+    <div class="row" style="margin-top:12px;">
+      <label class="muted">Filter:</label>
+      <select id="taskFilterStatus">
+        <option value="">All</option>
+        <option value="open" selected>Open</option>
+        <option value="in_progress">In progress</option>
+        <option value="done">Done</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+      <select id="taskFilterUser">
+        <option value="">All users</option>
+      </select>
+      <button class="btn" id="taskReload">Reload</button>
     </div>
 
-    <div class="card">
-      <h3 style="margin-top:0">Live View</h3>
-      <p class="muted">Last pings & per-user timeline</p>
-      <div id="map" style="height:420px;border-radius:12px;margin-bottom:8px"></div>
-      <div id="timeline" class="muted">—</div>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-top:0">Audit</h3>
-      <div class="row">
-        <a href="/api/admin/audit.csv" class="btn" target="_blank">Download CSV</a>
-      </div>
-      <div id="alist" class="muted" style="margin-top:8px">—</div>
-    </div>
-
+    <div id="taskList" style="margin-top:8px;max-height:320px;overflow:auto;" class="muted">Loading…</div>
   </div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script>
-    async function loadTariffs(){
-      const r = await fetch('/api/admin/tariffs').then(r=>r.json());
-      document.getElementById('tlist').innerHTML =
-        (r.rows||[]).map(t => t.code+' — R'+t.price).join('<br>') || 'No tariffs yet.';
-    }
-    document.getElementById('import').onclick = async ()=>{
-      document.getElementById('tstat').textContent='Importing…';
-      const r = await fetch('/api/admin/tariffs/import',{method:'POST'}).then(r=>r.json());
-      document.getElementById('tstat').textContent='Imported '+(r.imported||0);
-      loadTariffs();
-    };
 
-    async function loadUsers(){
-      const r = await fetch('/api/admin/users').then(r=>r.json());
-      const rows = r.rows || [];
-      document.getElementById('ulist').innerHTML =
-        rows.map(u => u.email+' · '+u.role).join('<br>') || 'No users yet.';
+  <div class="card">
+    <h3 style="margin-top:0;">Time / pings (last 7 days)</h3>
+    <div id="timeline" class="muted">—</div>
+  </div>
 
-      const sel = document.getElementById('taskUser');
-      const filt = document.getElementById('taskFilterUser');
-      if (sel && filt){
-        sel.innerHTML = '<option value="">Unassigned</option>';
-        filt.innerHTML = '<option value="">All users</option>';
-        rows.forEach(u=>{
-          const opt = document.createElement('option');
-          opt.value = u.id;
-          opt.textContent = u.name ? (u.name+' ('+u.email+')') : u.email;
-          sel.appendChild(opt);
+  <div class="card">
+    <h3 style="margin-top:0;">Audit</h3>
+    <div class="row">
+      <a href="/api/admin/audit.csv" class="btn" target="_blank">Download CSV</a>
+    </div>
+    <div id="alist" class="muted" style="margin-top:8px;">—</div>
+  </div>
 
-          const opt2 = document.createElement('option');
-          opt2.value = u.id;
-          opt2.textContent = u.name ? (u.name+' ('+u.email+')') : u.email;
-          filt.appendChild(opt2);
-        });
-      }
-    }
-    document.getElementById('usr').onsubmit = async (e)=>{
-      e.preventDefault();
-      const f = new FormData(e.target);
-      await fetch('/api/admin/users/save',{method:'POST', body:f}).then(r=>r.json());
-      loadUsers();
-    };
-
-    async function loadAudit(){
-      const a = await fetch('/api/admin/audit').then(r=>r.json());
-      document.getElementById('alist').innerHTML =
-        (a.rows||[]).slice(0,50).map(r =>
-          '['+new Date(r.created_at*1000).toLocaleString()+'] '+r.event
-        ).join('<br>') || 'No audit rows yet.';
-    }
-
-    async function loadTasks(){
-      const s = document.getElementById('taskFilterStatus').value;
-      const u = document.getElementById('taskFilterUser').value;
-      const params = new URLSearchParams();
-      if (s) params.set('status', s);
-      if (u) params.set('assigned_user_id', u);
-      const r = await fetch('/api/admin/tasks?'+params.toString()).then(r=>r.json());
-      const rows = r.rows || [];
-      const root = document.getElementById('taskList');
-      if (!rows.length){ root.innerHTML = 'No tasks.'; return; }
-      const pill = (st)=>{
-        const cls = st==='open'?'pill-open':(st==='in_progress'?'pill-in_progress':(st==='done'?'pill-done':'pill-cancelled'));
-        return '<span class="pill '+cls+'">'+st.replace('_',' ')+'</span>';
-      };
-      root.innerHTML = '<table><thead><tr><th>ID</th><th>Title</th><th>Assigned</th><th>Status</th><th>Due</th><th>Pri</th></tr></thead><tbody>'+
-        rows.map(t =>
-          '<tr>'+
-          '<td>'+t.id+'</td>'+
-          '<td>'+t.title+'</td>'+
-          '<td>'+(t.assigned_name||'–')+'</td>'+
-          '<td>'+pill(t.status||'open')+'</td>'+
-          '<td>'+(t.due_at? new Date(t.due_at*1000).toLocaleDateString():'–')+'</td>'+
-          '<td>'+(t.priority||'')+'</td>'+
-          '</tr>'
-        ).join('')+
-        '</tbody></table>';
-    }
-    document.getElementById('taskReload').onclick = loadTasks;
-    document.getElementById('taskFilterStatus').onchange = loadTasks;
-    document.getElementById('taskFilterUser').onchange = loadTasks;
-
-    document.getElementById('taskForm').onsubmit = async (e)=>{
-      e.preventDefault();
-      const msg = document.getElementById('taskMsg');
-      msg.textContent = 'Saving…';
-      const f = new FormData(e.target);
-      const r = await fetch('/api/admin/tasks/save',{method:'POST', body:f}).then(r=>r.json()).catch(()=>({ok:false}));
-      msg.textContent = r.ok ? 'Saved.' : 'Error saving task.';
-      if (r.ok){
-        e.target.reset();
-        loadTasks();
-      }
-    };
-
-    document.getElementById('covBtn').onclick = async ()=>{
-      const lat = (document.getElementById('covLat').value||'').trim();
-      const lng = (document.getElementById('covLng').value||'').trim();
-      const r = await fetch('/api/coverage/check?lat='+lat+'&lng='+lng).then(r=>r.json());
-      document.getElementById('covRes').textContent =
-        r.ok
-          ? ('Matches: '+(r.matches||[]).join(', ') + (r.recommendation ? (' | Recommend: '+r.recommendation.code+' @ R'+r.recommendation.price) : ''))
-          : 'Error';
-    };
-
-    const m = L.map('map').setView([-33.84, 18.84], 9);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(m);
-    let markers = [];
-    async function loadPings(){
-      const r = await fetch('/api/admin/time').then(r=>r.json()).catch(()=>({rows:[]}));
-      markers.forEach(mm=>m.removeLayer(mm)); markers=[];
-      const byUser = {};
-      r.rows.forEach(p=>{
-        if (!byUser[p.user_id||0]) byUser[p.user_id||0] = [];
-        byUser[p.user_id||0].push(p);
-      });
-      const parts=[];
-      for (const uid in byUser){
-        const arr = byUser[uid].sort((a,b)=>b.created_at-a.created_at);
-        const last = arr[0];
-        if (last && last.lat && last.lng){
-          markers.push(
-            L.marker([last.lat,last.lng]).addTo(m)
-             .bindPopup((last.name||('User '+uid))+' · '+new Date(last.created_at*1000).toLocaleString()+' · '+(last.status||''))
-          );
-        }
-        parts.push(
-          '<strong>'+(last?.name||('User '+uid))+'</strong><br>'+
-          arr.slice(0,10).map(p =>
-            '['+new Date(p.created_at*1000).toLocaleTimeString()+'] '+
-            (p.status||'')+
-            (p.task?(' · '+p.task):'')+
-            (p.lat?(' · '+p.lat.toFixed(4)+','+p.lng.toFixed(4)):'')
-          ).join('<br>')
-        );
-      }
-      document.getElementById('timeline').innerHTML = parts.join('<hr>') || 'No pings yet.';
-    }
-
+</div>
+<script>
+  async function loadTariffs(){
+    const r = await fetch('/api/admin/tariffs').then(r=>r.json());
+    document.getElementById('tlist').innerHTML =
+      (r.rows||[]).map(t => t.code+' — R'+t.price).join('<br>') || 'No tariffs yet.';
+  }
+  document.getElementById('import').onclick = async ()=>{
+    document.getElementById('tstat').textContent='Importing…';
+    const r = await fetch('/api/admin/tariffs/import',{method:'POST'}).then(r=>r.json());
+    document.getElementById('tstat').textContent='Imported '+(r.imported||0);
     loadTariffs();
+  };
+
+  async function loadUsers(){
+    const r = await fetch('/api/admin/users').then(r=>r.json());
+    const rows = r.rows || [];
+    document.getElementById('ulist').innerHTML =
+      rows.map(u => u.email+' · '+u.role).join('<br>') || 'No users yet.';
+
+    const sel = document.getElementById('taskUser');
+    const filt = document.getElementById('taskFilterUser');
+    if (sel && filt){
+      sel.innerHTML = '<option value="">Unassigned</option>';
+      filt.innerHTML = '<option value="">All users</option>';
+      rows.forEach(u=>{
+        const label = (u.name ? (u.name+' ('+u.email+')') : u.email);
+        const opt = document.createElement('option');
+        opt.value = u.id; opt.textContent = label;
+        sel.appendChild(opt);
+        const opt2 = document.createElement('option');
+        opt2.value = u.id; opt2.textContent = label;
+        filt.appendChild(opt2);
+      });
+    }
+  }
+  document.getElementById('usr').onsubmit = async (e)=>{
+    e.preventDefault();
+    const f = new FormData(e.target);
+    await fetch('/api/admin/users/save',{method:'POST', body:f}).then(r=>r.json());
     loadUsers();
-    loadAudit();
-    loadTasks();
-    loadPings();
-    setInterval(loadPings, 60000);
-  </script></body></html>`;
+  };
+
+  async function loadAudit(){
+    const a = await fetch('/api/admin/audit').then(r=>r.json());
+    document.getElementById('alist').innerHTML =
+      (a.rows||[]).slice(0,50).map(r =>
+        '['+new Date(r.created_at*1000).toLocaleString()+'] '+r.event
+      ).join('<br>') || 'No audit rows yet.';
+  }
+
+  async function loadTasks(){
+    const s = document.getElementById('taskFilterStatus').value;
+    const u = document.getElementById('taskFilterUser').value;
+    const params = new URLSearchParams();
+    if (s) params.set('status', s);
+    if (u) params.set('assigned_user_id', u);
+    const r = await fetch('/api/admin/tasks?'+params.toString()).then(r=>r.json());
+    const rows = r.rows || [];
+    const root = document.getElementById('taskList');
+    if (!rows.length){ root.innerHTML = 'No tasks.'; return; }
+    const pill = (st)=>{
+      const cls = st==='open'?'pill-open':(st==='in_progress'?'pill-in_progress':(st==='done'?'pill-done':'pill-cancelled'));
+      return '<span class="pill '+cls+'">'+st.replace('_',' ')+'</span>';
+    };
+    root.innerHTML = '<table><thead><tr><th>ID</th><th>Title</th><th>Assigned</th><th>Status</th><th>Due</th><th>Pri</th></tr></thead><tbody>'+
+      rows.map(t =>
+        '<tr>'+
+        '<td>'+t.id+'</td>'+
+        '<td>'+t.title+'</td>'+
+        '<td>'+(t.assigned_name||'–')+'</td>'+
+        '<td>'+pill(t.status||'open')+'</td>'+
+        '<td>'+(t.due_at? new Date(t.due_at*1000).toLocaleDateString():'–')+'</td>'+
+        '<td>'+(t.priority||'')+'</td>'+
+        '</tr>'
+      ).join('')+
+      '</tbody></table>';
+  }
+  document.getElementById('taskReload').onclick = loadTasks;
+  document.getElementById('taskFilterStatus').onchange = loadTasks;
+  document.getElementById('taskFilterUser').onchange = loadTasks;
+
+  document.getElementById('taskForm').onsubmit = async (e)=>{
+    e.preventDefault();
+    const msg = document.getElementById('taskMsg');
+    msg.textContent = 'Saving…';
+    const f = new FormData(e.target);
+    const r = await fetch('/api/admin/tasks/save',{method:'POST', body:f}).then(r=>r.json()).catch(()=>({ok:false}));
+    msg.textContent = r.ok ? 'Saved.' : 'Error saving task.';
+    if (r.ok){
+      e.target.reset();
+      loadTasks();
+    }
+  };
+
+  async function loadPings(){
+    const r = await fetch('/api/admin/time').then(r=>r.json()).catch(()=>({rows:[]}));
+    const rows = r.rows || [];
+    const byUser = {};
+    rows.forEach(p=>{
+      if (!byUser[p.user_id||0]) byUser[p.user_id||0] = [];
+      byUser[p.user_id||0].push(p);
+    });
+    const parts=[];
+    for (const uid in byUser){
+      const arr = byUser[uid].sort((a,b)=>b.created_at-a.created_at);
+      const last = arr[0];
+      parts.push(
+        '<strong>'+(last?.name||('User '+uid))+'</strong><br>'+
+        arr.slice(0,10).map(p =>
+          '['+new Date(p.created_at*1000).toLocaleTimeString()+'] '+
+          (p.status||'')+
+          (p.task?(' · '+p.task):'')
+        ).join('<br>')
+      );
+    }
+    document.getElementById('timeline').innerHTML = parts.join('<hr>') || 'No pings yet.';
+  }
+
+  loadTariffs();
+  loadUsers();
+  loadAudit();
+  loadTasks();
+  loadPings();
+  setInterval(loadPings, 60000);
+</script>
+</body>
+</html>`;
 }
 
 export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
   const url = new URL(req.url);
 
-  if (!me) {
-    return new Response("Unauthorized", { status: 401 });
+  if (!me) return new Response("Unauthorized", { status: 401 });
+
+  // HTML
+  if ((url.pathname === "/" || url.pathname === "/admin") && req.method === "GET") {
+    return html(adminHTML());
   }
 
-  if (url.pathname === "/" || url.pathname === "/admin")
-    return html(adminHTML());
-
+  // Tariffs
   if (url.pathname === "/api/admin/tariffs" && req.method === "GET") {
     const rows = await dbAll(
       `SELECT code,name,price FROM tariffs ORDER BY price ASC`,
@@ -328,6 +301,7 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
     return json({ imported: ins });
   }
 
+  // Users
   if (url.pathname === "/api/admin/users" && req.method === "GET") {
     const rows = await dbAll(
       `SELECT id,email,name,role,wa_number,splynx_admin_id,active FROM users ORDER BY id DESC`,
@@ -379,8 +353,7 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
     return json({ ok: true });
   }
 
-  // --- TASKS ADMIN API ---
-
+  // Tasks
   if (url.pathname === "/api/admin/tasks" && req.method === "GET") {
     const status = url.searchParams.get("status") || "";
     const assigned = url.searchParams.get("assigned_user_id") || "";
@@ -446,7 +419,7 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
 
     const now = Math.floor(Date.now() / 1000);
 
-    // fetch assigned user for WA + Splynx mapping
+    // assigned user for WA + Splynx technician mapping
     let assignedUser = null;
     if (assigned_user_id != null) {
       const rows = await dbAll(
@@ -459,7 +432,7 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
 
     if (!id) {
       // insert
-      await dbRun(
+      const res = await dbRun(
         `INSERT INTO tasks
          (title,description,status,priority,assigned_user_id,created_by_user_id,customer_id,due_at,created_at,updated_at)
          VALUES (?,?,?,?,?,?,?,?,?,?)`,
@@ -474,12 +447,9 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
         now,
         now,
       );
-      const row = await dbAll(
-        `SELECT id FROM tasks ORDER BY id DESC LIMIT 1`,
-      );
-      const newId = row[0]?.id || null;
+      const newId = res.meta.last_row_id || null;
 
-      // push to Splynx scheduling if possible
+      // push to Splynx scheduling
       try {
         const t = {
           id: newId,
@@ -489,11 +459,11 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
           due_at,
           assigned_splynx_admin_id: assignedUser?.splynx_admin_id || null,
         };
-        const res = await splynxCreateSchedule(env, t);
-        if (res.ok && res.json?.id) {
+        const resp = await splynxCreateSchedule(env, t);
+        if (resp.ok && resp.json?.id) {
           await dbRun(
             `UPDATE tasks SET splynx_task_id = ?, updated_at=? WHERE id=?`,
-            res.json.id,
+            resp.json.id,
             now,
             newId,
           );
@@ -529,7 +499,6 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
       );
       return json({ ok: true });
     } else {
-      // update
       await dbRun(
         `UPDATE tasks
          SET title=?,description=?,status=?,priority=?,assigned_user_id=?,customer_id=?,due_at=?,updated_at=?
@@ -545,7 +514,6 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
         id,
       );
 
-      // WhatsApp notify on status / reassignment
       if (assignedUser?.wa_number) {
         const msg =
           `Task update:\n` +
@@ -568,6 +536,7 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
     }
   }
 
+  // Audit
   if (url.pathname === "/api/admin/audit" && req.method === "GET") {
     const rows = await dbAll(
       `SELECT id,user_id,event,meta,created_at FROM audit_logs ORDER BY id DESC LIMIT 500`,
@@ -596,10 +565,11 @@ export async function handleAdmin(req, env, { dbAll, dbRun, me }) {
     });
   }
 
+  // Time / pings
   if (url.pathname === "/api/admin/time" && req.method === "GET") {
     const rows = await dbAll(
       `
-      SELECT tp.id, tp.user_id, tp.lat, tp.lng, tp.status, tp.task, tp.created_at,
+      SELECT tp.id, tp.user_id, tp.status, tp.task, tp.created_at,
              u.name, u.email
       FROM time_pings tp
       LEFT JOIN users u ON tp.user_id = u.id
