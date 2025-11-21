@@ -26,7 +26,7 @@ TURNSTILE_SITE_KEY = "REPLACE_TURNSTILE_SITE_KEY"
 TURNSTILE_SECRET_KEY = "REPLACE_TURNSTILE_SECRET_KEY"
 
 # SSO / cookies
-SSO_SECRET = "REPLACE_WITH_LONG_RANDOM_SECRET"   # at least 32+ chars
+SSO_SECRET = "|@8?`<lt6j3)klfs}Gb%:;z=*Oe!^72pfb)t9toBS'"HLxs@Hf,q)J?h,5_/9$W"   # at least 32+ chars
 COOKIE_DOMAIN = ".vinet.co.za"
 
 # R2 – public base path for images
@@ -49,7 +49,7 @@ crons = ["0 2 * * *"]  # nightly tariff import
 [[d1_databases]]
 binding = "DB"
 database_name = "vinet-ops"
-database_id = "REPLACE_D1_ID"
+database_id = "ae895972-63bb-4955-8289-49e045d35cee"
 
 [[r2_buckets]]
 binding = "OPS_MEDIA"
@@ -60,7 +60,7 @@ binding = "RATE"
 id = "REPLACE_RATE_KV"
 
 [[kv_namespaces]]
-binding = "COVERAGE"
+binding = "COVERAGE_KV"
 id = "03f9082eb4654e5c8cc238d0b80b025f"  # your existing COVERAGE_KV
 
 [[kv_namespaces]]
