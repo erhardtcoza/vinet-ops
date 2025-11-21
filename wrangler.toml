@@ -1,35 +1,56 @@
 name = "vinet-ops"
 main = "src/index.js"
-compatibility_date = "2025-11-01"
-workers_dev = true
+compatibility_date = "2024-11-20"
+account_id = "0ba56c77d4b26cfe73302244e6df2a5d"
 
+[[routes]]
+pattern = "new.vinet.co.za/*"
+zone_name = "vinet.co.za"
+
+[[routes]]
+pattern = "dash.vinet.co.za/*"
+zone_name = "vinet.co.za"
+
+[[routes]]
+pattern = "agent.vinet.co.za/*"
+zone_name = "vinet.co.za"
 
 [vars]
-SPYLNX_URL = "https://splynx.vinet.co.za"
-CORS_ORIGIN = "*"
-# AUTH_HEADER is your Basic auth header for Splynx. Set via `wrangler secret put AUTH_HEADER`.
+SPLYNX_URL = "https://splynx.vinet.co.za"
+AUTH_HEADER = "Basic NTcxMDRhNGJjNjhhY2Y2MjRkMDliMmYwOTQ1ZTI1M2E6N2UyOTNmY2QyNzBjODJmOTdjNWQzODUwZjdhM2I1MTE="
+TURNSTILE_SITE_KEY = "REPLACE_TURNSTILE_SITE_KEY"
+TURNSTILE_SECRET_KEY = "REPLACE_TURNSTILE_SECRET_KEY"
+SSO_SECRET = "REPLACE_WITH_LONG_RANDOM_SECRET"
+COOKIE_DOMAIN = ".vinet.co.za"
+R2_PUBLIC_BASE = "https://w-image.vinetdns.co.za"
+WHATSAPP_TOKEN = "REPLACE_WHATSAPP_TOKEN"
+PHONE_NUMBER_ID = "104043025887306"
+WA_TEMPLATE_OTP = "vinet_otp"
+WA_TEMPLATE_NOTIFY = "vinet_notify"
+WA_ADMIN_MSISDN = "27XXXXXXXXX"
+INVENTORY_STORE_ID = "1"
+INVENTORY_MOVE_TYPE_ID = "1"
 
+[triggers]
+crons = ["0 2 * * *"]
 
 [[d1_databases]]
 binding = "DB"
 database_name = "vinet-ops"
-database_id = "<D1_ID>"
-
+database_id = "REPLACE_D1_ID"
 
 [[r2_buckets]]
-binding = "R2_BUCKET"
+binding = "OPS_MEDIA"
 bucket_name = "vinet-ops-media"
 
+[[kv_namespaces]]
+binding = "RATE"
+id = "REPLACE_RATE_KV"
 
 [[kv_namespaces]]
-binding = "SESSION_KV"
-id = "<SESSION_KV_ID>"
-
+binding = "COVERAGE"
+id = "03f9082eb4654e5c8cc238d0b80b025f"
 
 [[kv_namespaces]]
-binding = "CONFIG_KV"
-id = "<CONFIG_KV_ID>"
-
-
-[site]
-bucket = "public"
+binding = "AUTH"
+id = "REPLACE_AUTH_KV"
