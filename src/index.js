@@ -66,8 +66,18 @@ export default {
       if (pathname.startsWith("/api/coverage/check")) return handleCoverageCheck(req, env, ctx(env));
       return handleNew(req, env, ctx(env));
     }
-    if (hostname.startsWith("dash.")) { const me = await getUserFromCookie(req, env); if (!me) return redirectLogin(env); return handleAdmin(req, env, ctx(env)); }
-    if (hostname.startsWith("agent.")) { const me = await getUserFromCookie(req, env); if (!me) return redirectLogin(env); return handleAgent(req, env, ctx(env)); }
+    if (hostname.startsWith("dash.")) {
+      const me = await getUserFromCookie(req, env);
+      if (!me) return redirectLogin(env);
+      return handleAdmin(req, env, { ...ctx(env), me });
+    }
+
+    if (hostname.startsWith("agent.")) {
+      const me = await getUserFromCookie(req, env);
+      if (!me) return redirectLogin(env);
+      return handleAgent(req, env, { ...ctx(env), me });
+    }
+
     if (pathname.startsWith("/api/admin/leads/")) return handleSplynx(req, env, ctx(env));
     return handleNew(req, env, ctx(env));
   }
