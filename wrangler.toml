@@ -67,3 +67,10 @@ id = "03f9082eb4654e5c8cc238d0b80b025f"  # your existing COVERAGE_KV
 [[kv_namespaces]]
 binding = "AUTH_KV"
 id = "cf45a7c354764274b13d27d6f5307195"
+
+[observability]
+[observability.logs]
+enabled = false
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
