@@ -1,11 +1,14 @@
+export async function verifyTurnstile(env, token, remoteip) {
+  if (!env.TURNSTILE_SECRET_KEY) return { ok: true };
+  const form = new FormData();
+  form.append("secret", env.TURNSTILE_SECRET_KEY);
+  form.append("response", token || "");
+  if (remoteip) form.append("remoteip", remoteip);
 
-export async function verifyTurnstile(env, token, ip){
-  try{
-    const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method: 'POST',
-      body: new URLSearchParams({ secret: env.TURNSTILE_SECRET_KEY, response: token, remoteip: ip||'' })
-    });
-    const j = await r.json();
-    return !!j.success;
-  }catch{ return false; }
+  const res = await fetch(
+    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+    { method: "POST", body: form },
+  );
+  const data = await res.json().catch(() => ({}));
+  return { ok: !!data.success, data };
 }
