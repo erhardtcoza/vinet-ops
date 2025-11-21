@@ -1,284 +1,202 @@
-// /src/routes/agent.js
 import { html, json } from "../lib/http.js";
+import { splynxCreateStockMove } from "../lib/ext.js";
 
-function agentHTML() {
-  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Vinet · Agent</title>
+function agentHTML(me) {
+  const name = me?.name || me?.email || "Agent";
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Vinet · Field app</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body{font:14px system-ui;background:#f7f7f8;color:#0b1320;margin:0}
-    .wrap{max-width:720px;margin:24px auto;padding:0 16px}
-    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.06);margin-bottom:12px}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .btn{background:#E10600;color:#fff;border:none;border-radius:10px;padding:8px 12px;cursor:pointer}
-    input{padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px}
-    .muted{color:#6b7280}
-    .pill{display:inline-block;padding:2px 6px;border-radius:999px;font-size:11px}
-    .pill-open{background:#fee2e2;color:#b91c1c}
-    .pill-in_progress{background:#fef3c7;color:#92400e}
-    .pill-done{background:#dcfce7;color:#166534}
-    .pill-cancelled{background:#e5e7eb;color:#374151}
+    body{margin:0;font-family:system-ui;background:#f7f7f8;color:#0b1320;}
+    .wrap{max-width:520px;margin:0 auto;padding:8px 12px 40px;}
+    .card{background:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 1px 2px rgba(0,0,0,.06);margin-bottom:10px;}
+    .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .tabs{display:flex;gap:6px;margin-bottom:8px;}
+    .tab{flex:1;text-align:center;padding:8px;border-radius:999px;border:1px solid #e5e7eb;cursor:pointer;font-size:13px;}
+    .tab.active{background:#E10600;color:#fff;border-color:#E10600;}
+    .btn{background:#E10600;color:#fff;border:none;border-radius:999px;padding:8px 12px;font-size:14px;cursor:pointer;}
+    input,textarea{width:100%;padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;font:inherit;}
+    textarea{min-height:60px;resize:vertical;}
+    .muted{color:#6b7280;font-size:12px;}
+    .task{border:1px solid #e5e7eb;border-radius:12px;padding:8px 10px;margin-bottom:6px;}
+    .task h4{margin:0 0 4px 0;font-size:14px;}
+    .task small{font-size:11px;color:#6b7280;}
+    .status-pill{display:inline-block;padding:2px 6px;border-radius:999px;font-size:11px;margin-top:4px;}
+    .status-open{background:#fee2e2;color:#b91c1c;}
+    .status-in_progress{background:#fef3c7;color:#92400e;}
+    .status-done{background:#dcfce7;color:#166534;}
+    .status-cancelled{background:#e5e7eb;color:#374151;}
+    .row{display:flex;gap:6px;flex-wrap:wrap;}
+    .row > div{flex:1;min-width:0;}
   </style>
-  </head><body><div class="wrap">
-
-    <div class="card">
-      <h3 style="margin-top:0">Quick Assign</h3>
-      <form id="qa" enctype="multipart/form-data">
-        <input name="barcode" placeholder="Scan / enter barcode" required>
-        <input type="url" name="photo_url" placeholder="Photo URL (auto-filled after upload)">
-        <input name="note" placeholder="Note">
-        <button class="btn">Save</button>
-      </form>
-      <div id="out" class="muted" style="margin-top:8px">—</div>
-    </div>
-
-    <div class="card">
-      <h4>Scan Barcode</h4>
-      <video id="preview" style="width:100%;border-radius:12px"></video>
-      <div class="row">
-        <button class="btn" id="startScan" type="button">Start camera</button>
-        <span id="scanOut" class="muted">—</span>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="top">
+      <div>
+        <div style="font-size:13px;" class="muted">Logged in as</div>
+        <div style="font-weight:600;">${name}</div>
       </div>
+      <img src="https://static.vinet.co.za/logo.jpeg" style="height:32px;border-radius:8px;">
     </div>
-
-    <div class="card">
-      <h4>Upload Photo</h4>
-      <input type="file" id="photo" accept="image/*" capture="environment">
-      <div class="row">
-        <button class="btn" id="upBtn" type="button">Upload</button>
-        <span id="upOut" class="muted">—</span>
-      </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="tasks">Tasks</div>
+      <div class="tab" data-tab="stock">Stock</div>
+      <div class="tab" data-tab="status">Status</div>
     </div>
-
-    <div class="card">
-      <h3 style="margin-top:0">My Tasks</h3>
-      <div id="tasksMe" class="muted">Loading…</div>
-    </div>
-
   </div>
-  <script>
-    // --- Upload to R2 ---
-    document.getElementById('upBtn').onclick = async ()=>{
-      const f = document.getElementById('photo').files[0];
-      if (!f){
-        document.getElementById('upOut').textContent='Pick a photo first';
-        return;
-      }
-      const fd = new FormData(); fd.append('file', f, f.name);
-      const r = await fetch('/api/agent/upload', { method:'POST', body: fd }).then(r=>r.json()).catch(()=>({ok:false}));
-      document.getElementById('upOut').textContent = r.ok ? r.url : 'Error';
-      if (r.ok){
-        const pu = document.querySelector('input[name="photo_url"]');
-        if (pu) pu.value = r.url;
-      }
-    };
 
-    // --- Barcode camera ---
-    let codeReader = null;
-    document.getElementById('startScan').onclick = async ()=>{
-      if (!codeReader){
-        const m = await import('https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js');
-        codeReader = new m.BrowserMultiFormatReader();
-      }
-      const video = document.getElementById('preview');
-      try{
-        await codeReader.decodeFromVideoDevice(undefined, video, (res, err)=>{
-          if (res){
-            document.querySelector('input[name="barcode"]').value = res.getText();
-            document.getElementById('scanOut').textContent = res.getText();
-          }
-        });
-      }catch(e){
-        document.getElementById('scanOut').textContent='No camera';
-      }
-    };
+  <div class="card" id="tab-tasks">
+    <div class="top" style="margin-bottom:6px;">
+      <h3 style="margin:0;font-size:15px;">My tasks</h3>
+      <button class="btn" id="reloadTasks">Reload</button>
+    </div>
+    <div id="tasksList" class="muted">Loading…</div>
+  </div>
 
-    // --- Quick assign ---
-    document.getElementById('qa').onsubmit = async (e)=>{
-      e.preventDefault();
-      const f = new FormData(e.target);
-      const r = await fetch('/api/agent/quick-assign',{method:'POST', body:f}).then(r=>r.json()).catch(()=>({ok:false}));
-      document.getElementById('out').textContent = r.ok
-        ? ('Saved & pushed'+ (r.sync && r.sync.ok ? ' (Splynx OK)' : ' (Splynx NOK)'))
-        : 'Error';
-    };
+  <div class="card" id="tab-stock" style="display:none;">
+    <h3 style="margin-top:0;font-size:15px;">Quick stock assign</h3>
+    <form id="stockForm">
+      <input name="barcode" placeholder="Barcode / scan result" required>
+      <textarea name="note" placeholder="Note (where used / which client)"></textarea>
+      <div style="margin-top:6px;">
+        <input type="file" name="photo" accept="image/*" capture="environment">
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn" type="submit">Save & push to Splynx</button>
+      </div>
+      <div id="stockMsg" class="muted" style="margin-top:4px;"></div>
+    </form>
+  </div>
 
-    // --- Time ping (background) ---
-    async function sendPing(status="on", task=""){
-      try{
-        let lat = null, lng = null;
-        if (navigator.geolocation){
-          await new Promise((res)=>{
-            navigator.geolocation.getCurrentPosition(
-              (pos)=>{ lat = pos.coords.latitude; lng = pos.coords.longitude; res(); },
-              ()=>res(),
-              { enableHighAccuracy:true, maximumAge:15000, timeout:5000 }
-            );
-          });
-        }
-        const fd = new FormData();
-        if (lat != null) fd.append('lat', lat);
-        if (lng != null) fd.append('lng', lng);
-        fd.append('status', status);
-        fd.append('task', task || '');
-        await fetch('/api/agent/ping', { method:'POST', body: fd });
-      }catch(e){}
-    }
-    setInterval(()=>sendPing("on",""), 60000);
-    sendPing("on","");
+  <div class="card" id="tab-status" style="display:none;">
+    <h3 style="margin-top:0;font-size:15px;">Status / time ping</h3>
+    <form id="pingForm">
+      <input name="status" placeholder="Short status (e.g. On site, Travelling)" required>
+      <input name="task" placeholder="Task ref (optional)">
+      <div style="margin-top:8px;">
+        <button class="btn" type="submit">Send ping</button>
+      </div>
+      <div class="muted" style="margin-top:4px;">Location is optional; turn on location in browser for richer data.</div>
+    </form>
+    <div id="pingMsg" class="muted" style="margin-top:4px;"></div>
+  </div>
+</div>
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(t => t.addEventListener('click', ()=>{
+    tabs.forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const name = t.dataset.tab;
+    document.getElementById('tab-tasks').style.display = name==='tasks'?'block':'none';
+    document.getElementById('tab-stock').style.display = name==='stock'?'block':'none';
+    document.getElementById('tab-status').style.display = name==='status'?'block':'none';
+  }));
 
-    // --- My tasks ---
-    function pill(st){
-      const cls = st==='open'?'pill-open':(st==='in_progress'?'pill-in_progress':(st==='done'?'pill-done':'pill-cancelled'));
-      return '<span class="pill '+cls+'">'+st.replace('_',' ')+'</span>';
-    }
+  function statusPill(s){
+    const cls = s==='open'?'status-open':(s==='in_progress'?'status-in_progress':(s==='done'?'status-done':'status-cancelled'));
+    return '<span class="status-pill '+cls+'">'+s.replace('_',' ')+'</span>';
+  }
 
-    async function loadMyTasks(){
-      const r = await fetch('/api/agent/tasks').then(r=>r.json()).catch(()=>({rows:[]}));
-      const rows = r.rows || [];
-      const root = document.getElementById('tasksMe');
-      if (!rows.length){
-        root.innerHTML = 'No tasks assigned.';
-        return;
-      }
-      root.innerHTML = rows.map(t=>{
-        const due = t.due_at ? new Date(t.due_at*1000).toLocaleString() : '–';
-        const btn =
-          t.status === 'open'
-            ? '<button class="btn" data-id="'+t.id+'" data-next="in_progress">Start</button>'
-          : t.status === 'in_progress'
-            ? '<button class="btn" data-id="'+t.id+'" data-next="done">Done</button>'
-          : '';
-        return '<div style="border-bottom:1px solid #e5e7eb;padding:8px 0">'+
-          '<div><strong>'+t.title+'</strong></div>'+
-          '<div class="muted">'+(t.description||'')+'</div>'+
-          '<div class="muted">Due: '+due+'</div>'+
-          '<div class="row" style="margin-top:4px">'+pill(t.status||"open")+' '+btn+'</div>'+
-        '</div>';
-      }).join('');
-      root.querySelectorAll('button[data-id]').forEach(btn=>{
-        btn.onclick = async ()=>{
-          const id = btn.getAttribute('data-id');
-          const next = btn.getAttribute('data-next');
-          const fd = new FormData();
-          fd.append('id', id);
-          fd.append('status', next);
-          await fetch('/api/agent/tasks/status',{method:'POST', body:fd});
-          loadMyTasks();
-        };
+  async function loadTasks(){
+    const r = await fetch('/api/agent/tasks').then(r=>r.json()).catch(()=>({rows:[]}));
+    const rows = r.rows || [];
+    const root = document.getElementById('tasksList');
+    if (!rows.length){ root.textContent = 'No tasks assigned.'; return; }
+    root.innerHTML = rows.map(t =>
+      '<div class="task">'+
+        '<h4>#'+t.id+' · '+t.title+'</h4>'+
+        (t.description?('<div>'+t.description+'</div>'):'')+
+        '<div><small>Priority: '+(t.priority||'')+'</small></div>'+
+        (t.due_at ? ('<div><small>Due: '+new Date(t.due_at*1000).toLocaleString()+'</small></div>') : '')+
+        statusPill(t.status||'open')+
+        '<div style="margin-top:6px;">'+
+          '<button data-id="'+t.id+'" data-status="open" class="btn btn-sm" style="padding:4px 8px;font-size:11px;margin-right:4px;">Open</button>'+
+          '<button data-id="'+t.id+'" data-status="in_progress" class="btn btn-sm" style="padding:4px 8px;font-size:11px;margin-right:4px;">In progress</button>'+
+          '<button data-id="'+t.id+'" data-status="done" class="btn btn-sm" style="padding:4px 8px;font-size:11px;">Done</button>'+
+        '</div>'+
+      '</div>'
+    ).join('');
+    root.querySelectorAll('button[data-status]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.dataset.id;
+        const st = btn.dataset.status;
+        await fetch('/api/agent/tasks/update',{method:'POST', body:new URLSearchParams({id, status:st})});
+        loadTasks();
       });
-    }
+    });
+  }
+  document.getElementById('reloadTasks').onclick = loadTasks;
+  loadTasks();
 
-    loadMyTasks();
-    setInterval(loadMyTasks, 60000);
-  </script></body></html>`;
+  document.getElementById('stockForm').onsubmit = async (e)=>{
+    e.preventDefault();
+    const msg = document.getElementById('stockMsg');
+    msg.textContent = 'Saving…';
+    const f = new FormData(e.target);
+    const r = await fetch('/api/agent/stock',{method:'POST', body:f}).then(r=>r.json()).catch(()=>({ok:false}));
+    msg.textContent = r.ok ? 'Saved and pushed to Splynx.' : 'Error: '+(r.error||'save failed');
+    if (r.ok) e.target.reset();
+  };
+
+  document.getElementById('pingForm').onsubmit = async (e)=>{
+    e.preventDefault();
+    const msg = document.getElementById('pingMsg');
+    msg.textContent = 'Sending…';
+    const f = new FormData(e.target);
+    let lat = '', lng = '';
+    if (navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(async pos=>{
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+        f.append('lat', lat);
+        f.append('lng', lng);
+        const r = await fetch('/api/agent/ping',{method:'POST', body:f}).then(r=>r.json()).catch(()=>({ok:false}));
+        msg.textContent = r.ok ? 'Ping saved.' : 'Ping failed.';
+        if (r.ok) e.target.reset();
+      }, async _err=>{
+        const r = await fetch('/api/agent/ping',{method:'POST', body:f}).then(r=>r.json()).catch(()=>({ok:false}));
+        msg.textContent = r.ok ? 'Ping saved (no location).' : 'Ping failed.';
+        if (r.ok) e.target.reset();
+      });
+    } else {
+      const r = await fetch('/api/agent/ping',{method:'POST', body:f}).then(r=>r.json()).catch(()=>({ok:false}));
+      msg.textContent = r.ok ? 'Ping saved.' : 'Ping failed.';
+      if (r.ok) e.target.reset();
+    }
+  };
+</script>
+</body>
+</html>`;
 }
 
-export async function handleAgent(req, env, { dbRun, dbAll, me }) {
+export async function handleAgent(req, env, { dbAll, dbRun, me }) {
   const url = new URL(req.url);
+  const path = url.pathname;
 
-  // Agent routes require a logged-in user
   if (!me) return new Response("Unauthorized", { status: 401 });
 
-  if (url.pathname === "/" || url.pathname === "/agent")
-    return html(agentHTML());
-
-  if (url.pathname === "/api/agent/quick-assign" && req.method === "POST") {
-    const f = await req.formData();
-    const barcode = String(f.get("barcode") || "");
-    const photo = String(f.get("photo_url") || "");
-    const note = String(f.get("note") || "");
-    const now = Math.floor(Date.now() / 1000);
-
-    await dbRun(
-      `INSERT INTO stock_moves (agent_id, barcode, photo_url, note, created_at)
-       VALUES (?,?,?,?,?)`,
-      me.sub,
-      barcode,
-      photo,
-      note,
-      now,
-    );
-    await dbRun(
-      `INSERT INTO audit_logs (user_id,event,meta,created_at)
-       VALUES (?,?,?,?)`,
-      me.sub,
-      "agent.quick_assign",
-      JSON.stringify({ barcode, photo }),
-      now,
-    );
-
-    let sync = null;
-    try {
-      const { splynxCreateStockMove } = await import("../lib/ext.js");
-      sync = await splynxCreateStockMove(env, {
-        barcode,
-        note,
-        photo_url: photo,
-      });
-    } catch (e) {
-      sync = { ok: false, status: 0, json: { error: String(e) } };
-    }
-
-    // Optional WA notify is already in your previous version; add back if needed.
-    return json({ ok: true, sync });
+  if (path === "/" && req.method === "GET") {
+    return html(agentHTML(me));
   }
 
-  if (url.pathname === "/api/agent/upload" && req.method === "POST") {
-    const f = await req.formData();
-    const file = f.get("file");
-    if (!file || typeof file === "string")
-      return json({ ok: false, error: "file required" }, 400);
-
-    const key = `stock/${new Date().toISOString().slice(0, 10)}/${
-      crypto.randomUUID()
-    }-${file.name.replace(/[^\w.\-]+/g, "_")}`;
-    await env.OPS_MEDIA.put(key, file.stream(), {
-      httpMetadata: { contentType: file.type || "application/octet-stream" },
-    });
-    const urlPub = `${env.R2_PUBLIC_BASE.replace(/\/$/, "")}/${key}`;
-    return json({ ok: true, key, url: urlPub });
-  }
-
-  if (url.pathname === "/api/agent/ping" && req.method === "POST") {
-    const f = await req.formData();
-    const lat = parseFloat(String(f.get("lat") || ""));
-    const lng = parseFloat(String(f.get("lng") || ""));
-    const status = String(f.get("status") || "on");
-    const task = String(f.get("task") || "");
-    const now = Math.floor(Date.now() / 1000);
-
-    await dbRun(
-      `INSERT INTO time_pings (user_id, lat, lng, status, task, created_at)
-       VALUES (?,?,?,?,?,?)`,
-      me.sub,
-      Number.isFinite(lat) ? lat : null,
-      Number.isFinite(lng) ? lng : null,
-      status,
-      task,
-      now,
-    );
-    return json({ ok: true });
-  }
-
-  // Agent task endpoints
-  if (url.pathname === "/api/agent/tasks" && req.method === "GET") {
+  // My tasks
+  if (path === "/api/agent/tasks" && req.method === "GET") {
     const rows = await dbAll(
-      `SELECT id,title,description,status,priority,due_at,customer_id,splynx_task_id
-       FROM tasks
-       WHERE assigned_user_id = ?
-       ORDER BY status != 'open', status != 'in_progress', due_at IS NULL, due_at ASC, id DESC
-       LIMIT 200`,
+      `SELECT * FROM tasks WHERE assigned_user_id=? ORDER BY created_at DESC LIMIT 200`,
       me.sub,
     );
     return json({ rows });
   }
 
-  if (url.pathname === "/api/agent/tasks/status" && req.method === "POST") {
+  if (path === "/api/agent/tasks/update" && req.method === "POST") {
     const f = await req.formData();
-    const id = parseInt(String(f.get("id") || "0"), 10) || null;
-    const status = String(f.get("status") || "").trim();
-    if (!id || !status)
-      return json({ ok: false, error: "id,status required" }, 400);
-
+    const id = parseInt(String(f.get("id") || "0"), 10) || 0;
+    const status = String(f.get("status") || "").trim() || "open";
     const now = Math.floor(Date.now() / 1000);
     await dbRun(
       `UPDATE tasks SET status=?, updated_at=? WHERE id=? AND assigned_user_id=?`,
@@ -291,11 +209,73 @@ export async function handleAgent(req, env, { dbRun, dbAll, me }) {
       `INSERT INTO audit_logs (user_id,event,meta,created_at)
        VALUES (?,?,?,?)`,
       me.sub,
-      "tasks.status",
+      "tasks.status.agent",
       JSON.stringify({ id, status }),
       now,
     );
-    // You can optionally sync status to Splynx scheduling here.
+    return json({ ok: true });
+  }
+
+  // Stock quick-assign
+  if (path === "/api/agent/stock" && req.method === "POST") {
+    const f = await req.formData();
+    const barcode = String(f.get("barcode") || "").trim();
+    const note = String(f.get("note") || "").trim();
+    const file = f.get("photo");
+    if (!barcode) return json({ ok:false, error:"barcode required" }, 400);
+
+    const now = Math.floor(Date.now() / 1000);
+    let photoUrl = null;
+    if (file && file.name) {
+      const key = `stock/${me.sub}/${Date.now()}-${file.name}`;
+      await env.OPS_MEDIA.put(key, file.stream());
+      photoUrl = `${env.R2_PUBLIC_BASE}/${key}`;
+    }
+
+    await dbRun(
+      `INSERT INTO stock_moves (agent_id,barcode,photo_url,note,created_at)
+       VALUES (?,?,?,?,?)`,
+      me.sub,
+      barcode,
+      photoUrl,
+      note,
+      now,
+    );
+
+    try {
+      await splynxCreateStockMove(env, { barcode, note, photo_url: photoUrl });
+    } catch (_) {}
+
+    await dbRun(
+      `INSERT INTO audit_logs (user_id,event,meta,created_at)
+       VALUES (?,?,?,?)`,
+      me.sub,
+      "stock.quick_assign",
+      JSON.stringify({ barcode }),
+      now,
+    );
+    return json({ ok: true });
+  }
+
+  // Time ping
+  if (path === "/api/agent/ping" && req.method === "POST") {
+    const f = await req.formData();
+    const status = String(f.get("status") || "").trim();
+    const task = String(f.get("task") || "").trim();
+    const lat = parseFloat(String(f.get("lat") || "")) || null;
+    const lng = parseFloat(String(f.get("lng") || "")) || null;
+    const now = Math.floor(Date.now() / 1000);
+
+    await dbRun(
+      `INSERT INTO time_pings (user_id,lat,lng,status,task,created_at)
+       VALUES (?,?,?,?,?,?)`,
+      me.sub,
+      lat,
+      lng,
+      status,
+      task,
+      now,
+    );
     return json({ ok: true });
   }
 
