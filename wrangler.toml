@@ -1,8 +1,9 @@
 name = "vinet-ops"
 main = "src/index.js"
 compatibility_date = "2024-11-20"
-account_id = "0ba56c77d4b26cfe73302244e6df2a5d"
+account_id = "0ba56c77d4b26cfe73302244e6df2a5d"  # your existing CF account
 
+# Routes – single worker, multiple subdomains
 [[routes]]
 pattern = "new.vinet.co.za/*"
 zone_name = "vinet.co.za"
@@ -16,28 +17,39 @@ pattern = "agent.vinet.co.za/*"
 zone_name = "vinet.co.za"
 
 [vars]
+# Splynx
 SPLYNX_URL = "https://splynx.vinet.co.za"
 AUTH_HEADER = "Basic NTcxMDRhNGJjNjhhY2Y2MjRkMDliMmYwOTQ1ZTI1M2E6N2UyOTNmY2QyNzBjODJmOTdjNWQzODUwZjdhM2I1MTE="
+
+# Turnstile – add these from your dashboard
 TURNSTILE_SITE_KEY = "REPLACE_TURNSTILE_SITE_KEY"
 TURNSTILE_SECRET_KEY = "REPLACE_TURNSTILE_SECRET_KEY"
-SSO_SECRET = "REPLACE_WITH_LONG_RANDOM_SECRET"
+
+# SSO / cookies
+SSO_SECRET = "REPLACE_WITH_LONG_RANDOM_SECRET"   # at least 32+ chars
 COOKIE_DOMAIN = ".vinet.co.za"
+
+# R2 – public base path for images
 R2_PUBLIC_BASE = "https://w-image.vinetdns.co.za"
+
+# WhatsApp Cloud API (OTP + notifications)
 WHATSAPP_TOKEN = "REPLACE_WHATSAPP_TOKEN"
 PHONE_NUMBER_ID = "104043025887306"
 WA_TEMPLATE_OTP = "vinet_otp"
 WA_TEMPLATE_NOTIFY = "vinet_notify"
-WA_ADMIN_MSISDN = "27XXXXXXXXX"
+WA_ADMIN_MSISDN = "27XXXXXXXXX"  # your admin WA MSISDN
+
+# Splynx inventory defaults for quick-assign
 INVENTORY_STORE_ID = "1"
 INVENTORY_MOVE_TYPE_ID = "1"
 
 [triggers]
-crons = ["0 2 * * *"]
+crons = ["0 2 * * *"]  # nightly tariff import
 
 [[d1_databases]]
 binding = "DB"
 database_name = "vinet-ops"
-database_id = "ae895972-63bb-4955-8289-49e045d35cee"
+database_id = "REPLACE_D1_ID"
 
 [[r2_buckets]]
 binding = "OPS_MEDIA"
@@ -49,7 +61,7 @@ id = "REPLACE_RATE_KV"
 
 [[kv_namespaces]]
 binding = "COVERAGE"
-id = "03f9082eb4654e5c8cc238d0b80b025f"
+id = "03f9082eb4654e5c8cc238d0b80b025f"  # your existing COVERAGE_KV
 
 [[kv_namespaces]]
 binding = "AUTH"
